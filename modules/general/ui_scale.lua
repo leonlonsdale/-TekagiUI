@@ -1,4 +1,3 @@
--- Register the general module under the shared addon namespace.
 TekagiUI = TekagiUI or {}
 TekagiUI.Modules = TekagiUI.Modules or {}
 TekagiUI.Modules.General = {}

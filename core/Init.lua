@@ -1,9 +1,6 @@
--- Minimal addon namespace initialization.
 TekagiUI = TekagiUI or {}
 TekagiUI.Modules = TekagiUI.Modules or {}
 
--- Recursively copies default settings into the saved variables table.
--- Keeps existing user values and only fills in missing entries.
 local function CopyDefaults(src, dest)
     if not src then return end
     if not dest then dest = {} end

@@ -2,7 +2,6 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
 
 local function BuildSettingsUI()
-    -- Create the top-level "TekagiUI" parent category
     local mainCat = Settings.RegisterVerticalLayoutCategory("TekagiUI")
     Settings.RegisterAddOnCategory(mainCat)
 
