@@ -1,0 +1,14 @@
+## Interface: 120000, 120001
+## Title: TekagiUI
+## Notes: Small, lightweight tweaks to default UI.
+## Author: Tekagi
+## SavedVariables: TekagiUIDB
+## Version: 0.1
+
+core/Init.lua
+core/Globals.lua
+modules/general/ui_scale.lua
+modules/unitframes/colours.lua
+modules/commands/commands.lua
+
+core/Settings.lua
