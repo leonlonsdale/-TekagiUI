@@ -10,5 +10,6 @@ core/Globals.lua
 modules/general/ui_scale.lua
 modules/unitframes/colours.lua
 modules/commands/commands.lua
+modules/cooldowns/centerows.lua
 
 core/Settings.lua
