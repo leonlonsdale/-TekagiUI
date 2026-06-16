@@ -138,10 +138,6 @@ local function CenterViewer(viewer)
     if not iconW or iconW == 0 then return end
 
     local spacing = viewer.childXPadding or 4
-
-    local viewerWidth = viewer:GetWidth()
-    local centerX = viewerWidth / 2
-
     local rowIndex = 0
 
     for i = 1, #icons, limit do
@@ -150,23 +146,26 @@ local function CenterViewer(viewer)
 
         local count = finish - start + 1
 
+        -- Calculate total width of this specific row
         local rowWidth = count * iconW + (count - 1) * spacing
-        local startX = centerX - (rowWidth / 2)
+        
+        -- Start X is the offset from the CENTER of the viewer to the center of the first icon
+        local startX = -(rowWidth / 2) + (iconW / 2)
+        local rowYOffset = -rowIndex * (iconW + spacing)
 
-        for j = start, finish do
+        -- Position the first icon of the row relative to the TOP-CENTER of the parent viewer
+        local firstInRow = icons[start]
+        if firstInRow then
+            firstInRow:ClearAllPoints()
+            firstInRow:SetPoint("TOP", viewer, "TOP", startX, rowYOffset)
+        end
+
+        -- Chain the rest of the icons in this row to each other horizontally
+        for j = start + 1, finish do
             local icon = icons[j]
             if icon then
-                local col = j - start
-                local x = startX + col * (iconW + spacing)
-
                 icon:ClearAllPoints()
-                icon:SetPoint(
-                    "TOPLEFT",
-                    viewer,
-                    "TOPLEFT",
-                    x,
-                    -rowIndex * (iconW + spacing)
-                )
+                icon:SetPoint("LEFT", icons[j - 1], "RIGHT", spacing, 0)
             end
         end
 
@@ -212,6 +211,8 @@ local function RequestApply()
     end)
 end
 
+
+
 ------------------------------------------------------------
 -- Buff request (separate gating)
 ------------------------------------------------------------
@@ -222,11 +223,8 @@ local function RequestBuffApply()
     local viewer = _G["BuffIconCooldownViewer"]
     if not viewer then return end
 
-    C_Timer.After(0, function()
-        CenterBuffIcons(viewer)
-    end)
+    CenterBuffIcons(viewer)
 end
-
 ------------------------------------------------------------
 -- Hooks
 ------------------------------------------------------------

@@ -16,17 +16,16 @@
     ],
     "Lua.diagnostics.globals": [
         "TargetFrameToT",
-        "RAID_CLASS_COLORS",
         "PlayerFrame",
         "TargetFrame",
         "FocusFrame",
+        "RAID_CLASS_COLORS",
+        "Settings",
         "SlashCmdList",
         "ChatEdit_ActivateChat",
         "ChatEdit_SendText",
         "ChatEdit_DeactivateChat",
         "ChatFrame1EditBox",
-        "ChatEdit_GetActiveWindow",
-        "Settings",
-        "RAID"
+        "ChatEdit_GetActiveWindow"
     ]
 }
