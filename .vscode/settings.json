@@ -26,6 +26,14 @@
         "ChatEdit_SendText",
         "ChatEdit_DeactivateChat",
         "ChatFrame1EditBox",
-        "ChatEdit_GetActiveWindow"
+        "ChatEdit_GetActiveWindow",
+        "EditModeManagerFrame",
+        "BuffIconCooldownViewer",
+        "EssentialCooldownViewer",
+        "UtilityCooldownViewer",
+        "PetFrame",
+        "PowerBarColor",
+        "PlayerCastingBarFrame",
+        "ReloadUI"
     ]
 }

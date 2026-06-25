@@ -4,18 +4,10 @@ TekagiUI.Modules.CooldownCentering = {}
 
 local M = TekagiUI.Modules.CooldownCentering
 
-------------------------------------------------------------
--- Defaults
-------------------------------------------------------------
-
 M.defaults = {
     centerCooldowns = true,
     centerBuffs = false,
 }
-
-------------------------------------------------------------
--- Settings
-------------------------------------------------------------
 
 M.settings = {
     name = "Cooldown Manager",
@@ -24,35 +16,22 @@ M.settings = {
             label = "Center Cooldowns",
             callback = function(value)
                 if not TekagiUIDB then return end
-
                 TekagiUIDB.CooldownCentering = TekagiUIDB.CooldownCentering or {}
                 TekagiUIDB.CooldownCentering.centerCooldowns = value
-
-                if value then
-                    M.ApplyAll()
-                end
+                if value then M.ApplyAll() end
             end
         },
-
         centerBuffs = {
             label = "Center Buffs",
             callback = function(value)
                 if not TekagiUIDB then return end
-
                 TekagiUIDB.CooldownCentering = TekagiUIDB.CooldownCentering or {}
                 TekagiUIDB.CooldownCentering.centerBuffs = value
-
-                if value then
-                    M.ApplyAll()
-                end
+                if value then M.ApplyAll() end
             end
         },
     }
 }
-
-------------------------------------------------------------
--- Helpers
-------------------------------------------------------------
 
 local function IsEnabled(key)
     return TekagiUIDB
@@ -60,24 +39,20 @@ local function IsEnabled(key)
         and TekagiUIDB.CooldownCentering[key]
 end
 
-------------------------------------------------------------
--- Grid viewers
-------------------------------------------------------------
-
 local GRID_VIEWERS = {
     "EssentialCooldownViewer",
     "UtilityCooldownViewer",
 }
 
+local isCentering = false
+
 ------------------------------------------------------------
 -- Buff centering
 ------------------------------------------------------------
-
 local function CenterBuffIcons(viewer)
-    if not viewer then return end
+    if not viewer or isCentering then return end
 
     local icons = {}
-
     for _, child in ipairs({ viewer:GetChildren() }) do
         if child and child:IsShown() and child.Icon then
             icons[#icons + 1] = child
@@ -91,24 +66,43 @@ local function CenterBuffIcons(viewer)
     end)
 
     local iconW = icons[1]:GetWidth()
+    local iconH = icons[1]:GetHeight()
     if not iconW or iconW == 0 then return end
 
-    local spacing = viewer.childXPadding or 4
+    local isVertical = (viewer.isHorizontal == false) or (viewer.isVertical == true)
 
+    local spacing = viewer.childXPadding or viewer.childYPadding or 4
     local count = #icons
-    local totalWidth = (count * iconW) + ((count - 1) * spacing)
 
-    local startX = -(totalWidth / 2) + (iconW / 2)
+    isCentering = true
 
-    for i = 1, count do
-        local icon = icons[i]
-        if icon then
-            local x = startX + (i - 1) * (iconW + spacing)
+    if isVertical then
+        local totalHeight = (count * iconH) + ((count - 1) * spacing)
+        local startY = (totalHeight / 2) - (iconH / 2)
 
-            icon:ClearAllPoints()
-            icon:SetPoint("TOP", viewer, "TOP", x, 0)
+        for i = 1, count do
+            local icon = icons[i]
+            if icon then
+                local y = startY - (i - 1) * (iconH + spacing)
+                icon:ClearAllPoints()
+                icon:SetPoint("LEFT", viewer, "LEFT", 0, y)
+            end
+        end
+    else
+        local totalWidth = (count * iconW) + ((count - 1) * spacing)
+        local startX = -(totalWidth / 2) + (iconW / 2)
+
+        for i = 1, count do
+            local icon = icons[i]
+            if icon then
+                local x = startX + (i - 1) * (iconW + spacing)
+                icon:ClearAllPoints()
+                icon:SetPoint("TOP", viewer, "TOP", x, 0)
+            end
         end
     end
+
+    isCentering = false
 end
 
 ------------------------------------------------------------
@@ -116,51 +110,53 @@ end
 ------------------------------------------------------------
 
 local function CenterViewer(viewer)
-    if not viewer then return end
+    if not viewer or isCentering then return end
 
     local icons = {}
-
     for _, child in ipairs({ viewer:GetChildren() }) do
         if child and child:IsShown() and child.Icon then
             icons[#icons + 1] = child
         end
     end
 
-    if #icons == 0 then return end
+    if #icons == 0 then 
+        viewer.realGridWidth = 0
+        return 
+    end
 
     table.sort(icons, function(a, b)
         return (a.layoutIndex or 0) < (b.layoutIndex or 0)
     end)
 
     local limit = viewer.iconLimit or 8
-
     local iconW = icons[1]:GetWidth()
     if not iconW or iconW == 0 then return end
 
     local spacing = viewer.childXPadding or 4
     local rowIndex = 0
+    local maxCalculatedWidth = 0
+
+    isCentering = true
 
     for i = 1, #icons, limit do
         local start = i
         local finish = math.min(i + limit - 1, #icons)
-
         local count = finish - start + 1
 
-        -- Calculate total width of this specific row
-        local rowWidth = count * iconW + (count - 1) * spacing
+        local rowWidth = (count * iconW) + ((count - 1) * spacing)
+        if rowWidth > maxCalculatedWidth then
+            maxCalculatedWidth = rowWidth
+        end
         
-        -- Start X is the offset from the CENTER of the viewer to the center of the first icon
         local startX = -(rowWidth / 2) + (iconW / 2)
         local rowYOffset = -rowIndex * (iconW + spacing)
 
-        -- Position the first icon of the row relative to the TOP-CENTER of the parent viewer
         local firstInRow = icons[start]
         if firstInRow then
             firstInRow:ClearAllPoints()
             firstInRow:SetPoint("TOP", viewer, "TOP", startX, rowYOffset)
         end
 
-        -- Chain the rest of the icons in this row to each other horizontally
         for j = start + 1, finish do
             local icon = icons[j]
             if icon then
@@ -171,15 +167,18 @@ local function CenterViewer(viewer)
 
         rowIndex = rowIndex + 1
     end
-end
 
-------------------------------------------------------------
--- Apply
-------------------------------------------------------------
+    isCentering = false
+
+    viewer.realGridWidth = maxCalculatedWidth
+
+    if viewer:GetName() == "EssentialCooldownViewer" and TekagiUI.Modules.PersonalResource and TekagiUI.Modules.PersonalResource.UpdateLayout then
+        TekagiUI.Modules.PersonalResource.UpdateLayout()
+    end
+end
 
 local function ApplyAll()
     if not TekagiUIDB or not TekagiUIDB.CooldownCentering then return end
-
     local db = TekagiUIDB.CooldownCentering
 
     if db.centerCooldowns then
@@ -193,42 +192,6 @@ local function ApplyAll()
     end
 end
 
-------------------------------------------------------------
--- Cooldown request (FIXED gating)
-------------------------------------------------------------
-
-local pending = false
-
-local function RequestApply()
-    if not IsEnabled("centerCooldowns") then return end
-
-    if pending then return end
-    pending = true
-
-    C_Timer.After(0, function()
-        pending = false
-        ApplyAll()
-    end)
-end
-
-
-
-------------------------------------------------------------
--- Buff request (separate gating)
-------------------------------------------------------------
-
-local function RequestBuffApply()
-    if not IsEnabled("centerBuffs") then return end
-
-    local viewer = _G["BuffIconCooldownViewer"]
-    if not viewer then return end
-
-    CenterBuffIcons(viewer)
-end
-------------------------------------------------------------
--- Hooks
-------------------------------------------------------------
-
 local frame = CreateFrame("Frame")
 local buffFrame = CreateFrame("Frame")
 
@@ -241,14 +204,12 @@ buffFrame:RegisterEvent("UNIT_AURA")
 local function HookViewer(name)
     local viewer = _G[name]
     if not viewer or viewer._tekagiHooked then return end
-
     viewer._tekagiHooked = true
 
     if viewer.Layout then
-        hooksecurefunc(viewer, "Layout", RequestApply)
+        hooksecurefunc(viewer, "Layout", ApplyAll)
     end
-
-    viewer:HookScript("OnShow", RequestApply)
+    viewer:HookScript("OnShow", ApplyAll)
 end
 
 frame:SetScript("OnEvent", function()
@@ -259,29 +220,21 @@ frame:SetScript("OnEvent", function()
     local buffViewer = _G["BuffIconCooldownViewer"]
     if buffViewer and not buffViewer._tekagiHooked then
         buffViewer._tekagiHooked = true
-
-        buffViewer:HookScript("OnShow", RequestApply)
-
+        buffViewer:HookScript("OnShow", ApplyAll)
+        
         if buffViewer.Layout then
-            hooksecurefunc(buffViewer, "Layout", RequestApply)
+            hooksecurefunc(buffViewer, "Layout", ApplyAll)
         end
     end
 
-    C_Timer.After(0, ApplyAll)
+    ApplyAll()
 end)
 
 buffFrame:SetScript("OnEvent", function(_, event, unit)
     if not IsEnabled("centerBuffs") then return end
-
-    if event == "UNIT_AURA" and unit and unit ~= "player" then
-        return
-    end
-
-    RequestBuffApply()
+    if event == "UNIT_AURA" and unit and unit ~= "player" then return end
+    
+    ApplyAll()
 end)
-
-------------------------------------------------------------
--- Public API
-------------------------------------------------------------
 
 M.ApplyAll = ApplyAll

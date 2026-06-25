@@ -11,5 +11,6 @@ modules/general/ui_scale.lua
 modules/unitframes/colours.lua
 modules/commands/commands.lua
 modules/cooldowns/centerows.lua
+modules/personalresource/personalresources.lua
 
 core/Settings.lua
