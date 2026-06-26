@@ -12,5 +12,6 @@ modules/unitframes/colours.lua
 modules/commands/commands.lua
 modules/cooldowns/centerows.lua
 modules/personalresource/personalresources.lua
+modules/nameplates/nameplates.lua
 
 core/Settings.lua

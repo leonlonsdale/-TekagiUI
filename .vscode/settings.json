@@ -34,6 +34,10 @@
         "PetFrame",
         "PowerBarColor",
         "PlayerCastingBarFrame",
-        "ReloadUI"
+        "ReloadUI",
+        "NamePlateDriverFrame",
+        "CompactUnitFrame_UpdateHealthColor",
+        "PlayerUtil",
+        "LUA_WARNING"
     ]
 }
