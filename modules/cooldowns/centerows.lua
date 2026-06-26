@@ -7,6 +7,8 @@ local M = TekagiUI.Modules.CooldownCentering
 M.defaults = {
     centerCooldowns = true,
     centerBuffs = false,
+    anchorUtilityToEssentials = false,
+    anchorBuffsToPRD = false,
 }
 
 M.settings = {
@@ -30,6 +32,27 @@ M.settings = {
                 if value then M.ApplyAll() end
             end
         },
+        anchorUtilityToEssentials = {
+            label = "Anchor Utility Below Essentials",
+            callback = function(value)
+                if not TekagiUIDB then return end
+                TekagiUIDB.CooldownCentering = TekagiUIDB.CooldownCentering or {}
+                TekagiUIDB.CooldownCentering.anchorUtilityToEssentials = value
+                M.ApplyAll()
+            end
+        },
+        anchorBuffsToPRD = {
+            label = "Anchor Tracked Buffs Above PRD",
+            callback = function(value)
+                if not TekagiUIDB then return end
+                TekagiUIDB.CooldownCentering = TekagiUIDB.CooldownCentering or {}
+                TekagiUIDB.CooldownCentering.anchorBuffsToPRD = value
+                M.ApplyAll()
+                if TekagiUI.Modules.PersonalResource and TekagiUI.Modules.PersonalResource.UpdateLayout then
+                    TekagiUI.Modules.PersonalResource.UpdateLayout()
+                end
+            end
+        },
     }
 }
 
@@ -37,6 +60,10 @@ local function IsEnabled(key)
     return TekagiUIDB
         and TekagiUIDB.CooldownCentering
         and TekagiUIDB.CooldownCentering[key]
+end
+
+function M.IsBuffAnchoringEnabled()
+    return IsEnabled("anchorBuffsToPRD")
 end
 
 local GRID_VIEWERS = {
@@ -70,7 +97,6 @@ local function CenterBuffIcons(viewer)
     if not iconW or iconW == 0 then return end
 
     local isVertical = (viewer.isHorizontal == false) or (viewer.isVertical == true)
-
     local spacing = viewer.childXPadding or viewer.childYPadding or 4
     local count = #icons
 
@@ -108,7 +134,6 @@ end
 ------------------------------------------------------------
 -- Cooldown centering
 ------------------------------------------------------------
-
 local function CenterViewer(viewer)
     if not viewer or isCentering then return end
 
@@ -169,7 +194,6 @@ local function CenterViewer(viewer)
     end
 
     isCentering = false
-
     viewer.realGridWidth = maxCalculatedWidth
 
     if viewer:GetName() == "EssentialCooldownViewer" and TekagiUI.Modules.PersonalResource and TekagiUI.Modules.PersonalResource.UpdateLayout then
@@ -177,19 +201,57 @@ local function CenterViewer(viewer)
     end
 end
 
-local function ApplyAll()
+------------------------------------------------------------
+-- Core execution loop wrapped to run outside Blizzard's execution sequence
+------------------------------------------------------------
+local function RunAdjustments()
     if not TekagiUIDB or not TekagiUIDB.CooldownCentering then return end
     local db = TekagiUIDB.CooldownCentering
 
+    local inEditMode = (EditModeManagerFrame and EditModeManagerFrame:IsEditModeActive())
+    if inEditMode then return end
+
     if db.centerCooldowns then
         for _, name in ipairs(GRID_VIEWERS) do
-            CenterViewer(_G[name])
+            local viewer = _G[name]
+            if viewer and not viewer.isInEditMode then
+                CenterViewer(viewer)
+            end
         end
     end
 
     if db.centerBuffs then
-        CenterBuffIcons(_G["BuffIconCooldownViewer"])
+        local buffs = _G["BuffIconCooldownViewer"]
+        if buffs and not buffs.isInEditMode then
+            CenterBuffIcons(buffs)
+        end
     end
+
+    -- Anchor Utility Viewer dynamically below Essential Viewer
+    if db.anchorUtilityToEssentials and not InCombatLockdown() then
+        local essentials = _G["EssentialCooldownViewer"]
+        local utility = _G["UtilityCooldownViewer"]
+        
+        if essentials and utility and not utility.isInEditMode and not essentials.isInEditMode then
+            utility:ClearAllPoints()
+            utility:SetPoint("TOP", essentials, "BOTTOM", 0, -6)
+        end
+    end
+
+    -- Anchor Tracked Buff positioning rules above PRD frame
+    if db.anchorBuffsToPRD and not InCombatLockdown() then
+        local buffs = _G["BuffIconCooldownViewer"]
+        local prd = _G["PersonalResourceDisplayFrame"]
+        if buffs and prd and not buffs.isInEditMode then
+            buffs:ClearAllPoints()
+            buffs:SetPoint("BOTTOM", prd, "TOP", 0, 6)
+        end
+    end
+end
+
+local function ApplyAll()
+    -- Delays execution by 0 frames, breaking clear out of secure stack contexts
+    C_Timer.After(0, RunAdjustments)
 end
 
 local frame = CreateFrame("Frame")
@@ -225,6 +287,11 @@ frame:SetScript("OnEvent", function()
         if buffViewer.Layout then
             hooksecurefunc(buffViewer, "Layout", ApplyAll)
         end
+    end
+
+    if EditModeManagerFrame and not EditModeManagerFrame._tekagiCooldownsHooked then
+        EditModeManagerFrame._tekagiCooldownsHooked = true
+        EditModeManagerFrame:HookScript("OnHide", ApplyAll)
     end
 
     ApplyAll()
