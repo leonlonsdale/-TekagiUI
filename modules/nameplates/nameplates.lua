@@ -43,7 +43,7 @@ local function GetColor(role)
         tank_safe = { r = 0.0, g = 1.0, b = 0.0 },
         tank_warn = { r = 1.0, g = 0.5, b = 0.0 }
     }
-    -- Force numeric values even if the DB is corrupted
+
     local db = (TekagiUIDB and TekagiUIDB.Nameplates and TekagiUIDB.Nameplates.colors) or {}
     local c = db[role]
     if type(c) == "table" and type(c.r) == "number" and type(c.g) == "number" and type(c.b) == "number" then
@@ -84,8 +84,6 @@ function ApplyColor(unit)
     if isEnabled then
         local c = GetColor(GetRole(unit))
         
-        -- Bypass the object-passing and use the standard, direct numeric API
-        -- If this still fails, it means the frame is truly "locked" by the driver
         healthBar:SetStatusBarColor(c.r, c.g, c.b, 1)
         
         local tex = healthBar:GetStatusBarTexture()
