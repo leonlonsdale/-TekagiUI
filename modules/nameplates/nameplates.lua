@@ -75,6 +75,10 @@ end
 
 function ApplyColor(unit)
     if not unit or not unit:find("nameplate") then return end
+    
+    -- ADDED: Skip if the unit is friendly
+    if UnitIsFriend("player", unit) then return end
+    
     local namePlate = C_NamePlate.GetNamePlateForUnit(unit)
     if not namePlate or not namePlate.UnitFrame or not namePlate.UnitFrame.healthBar then return end
     
@@ -83,7 +87,6 @@ function ApplyColor(unit)
     
     if isEnabled then
         local c = GetColor(GetRole(unit))
-        
         healthBar:SetStatusBarColor(c.r, c.g, c.b, 1)
         
         local tex = healthBar:GetStatusBarTexture()
@@ -91,6 +94,7 @@ function ApplyColor(unit)
             tex:SetVertexColor(c.r, c.g, c.b) 
         end
     else
+        -- Only restore default if it wasn't a friendly unit
         healthBar:SetStatusBarColor(1, 1, 1, 1)
     end
 end
