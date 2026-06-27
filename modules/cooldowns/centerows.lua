@@ -9,6 +9,7 @@ M.defaults = {
     centerBuffs = false,
     anchorUtilityToEssentials = false,
     anchorBuffsToPRD = false,
+    anchorBuffsToPowerBars = false,
 }
 
 M.settings = {
@@ -53,6 +54,15 @@ M.settings = {
                 end
             end
         },
+        anchorBuffsToPowerBars = {
+    label = "Anchor Tracked Buffs Above Power Bars",
+    callback = function(value)
+        if not TekagiUIDB then return end
+        TekagiUIDB.CooldownCentering = TekagiUIDB.CooldownCentering or {}
+        TekagiUIDB.CooldownCentering.anchorBuffsToPowerBars = value
+        M.ApplyAll()
+    end
+},
     }
 }
 
@@ -239,14 +249,40 @@ local function RunAdjustments()
     end
 
     -- Anchor Tracked Buff positioning rules above PRD frame
-    if db.anchorBuffsToPRD and not InCombatLockdown() then
-        local buffs = _G["BuffIconCooldownViewer"]
-        local prd = _G["PersonalResourceDisplayFrame"]
-        if buffs and prd and not buffs.isInEditMode then
-            buffs:ClearAllPoints()
-            buffs:SetPoint("BOTTOM", prd, "TOP", 0, 6)
+if not InCombatLockdown() then
+    local buffs = _G["BuffIconCooldownViewer"]
+
+    if buffs and not buffs.isInEditMode then
+
+        if db.anchorBuffsToPowerBars then
+
+            local anchor
+
+            -- Prefer the secondary power bar if it's visible
+            if _G["TekagiSecondaryContainer"] and _G["TekagiSecondaryContainer"]:IsShown() then
+                anchor = _G["TekagiSecondaryContainer"]
+
+            -- Otherwise fall back to the main power bar
+            elseif _G["TekagiPowerBar"] and _G["TekagiPowerBar"]:IsShown() then
+                anchor = _G["TekagiPowerBar"]
+            end
+
+            if anchor then
+                buffs:ClearAllPoints()
+                buffs:SetPoint("BOTTOM", anchor, "TOP", 0, 6)
+            end
+
+        elseif db.anchorBuffsToPRD then
+
+            local prd = _G["PersonalResourceDisplayFrame"]
+
+            if prd then
+                buffs:ClearAllPoints()
+                buffs:SetPoint("BOTTOM", prd, "TOP", 0, 6)
+            end
         end
     end
+end
 end
 
 local function ApplyAll()
