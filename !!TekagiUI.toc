@@ -13,5 +13,6 @@ modules/commands/commands.lua
 modules/cooldowns/centerows.lua
 modules/personalresource/personalresources.lua
 modules/nameplates/nameplates.lua
+modules/powerbar/powerbar.lua
 
 core/Settings.lua
