@@ -9,6 +9,7 @@ local state = {
 }
 
 local activeNameplates = {}
+local ApplyColor
 
 ------------------------------------------------------------
 -- Colours
@@ -81,6 +82,25 @@ end
 -- Settings
 ------------------------------------------------------------
 
+local frame = CreateFrame("Frame")
+
+local function RegisterEvents()
+	frame:RegisterEvent("PLAYER_LEVEL_UP")
+	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+	frame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
+	frame:RegisterEvent("UNIT_THREAT_LIST_UPDATE")
+	frame:RegisterEvent("UNIT_HEALTH")
+end
+
+local function UnregisterEvents()
+	frame:UnregisterAllEvents()
+end
+
+local function IsEnabled()
+	return not (TekagiUIDB and TekagiUIDB.Nameplates and TekagiUIDB.Nameplates.enabled == false)
+end
+
 M.settings = {
 
 	name = "Nameplates",
@@ -95,8 +115,20 @@ M.settings = {
 
 			callback = function(value)
 				TekagiUIDB.Nameplates = TekagiUIDB.Nameplates or {}
-
 				TekagiUIDB.Nameplates.enabled = value
+
+				if value then
+					RegisterEvents()
+					M:Refresh()
+				else
+					UnregisterEvents()
+
+					for unit in pairs(activeNameplates) do
+						if UnitExists(unit) then
+							ApplyColor(unit)
+						end
+					end
+				end
 			end,
 		},
 
@@ -108,8 +140,11 @@ M.settings = {
 
 			callback = function(value)
 				TekagiUIDB.Nameplates = TekagiUIDB.Nameplates or {}
-
 				TekagiUIDB.Nameplates.tankMode = value
+
+				if IsEnabled() then
+					M:Refresh()
+				end
 			end,
 		},
 	},
@@ -198,7 +233,6 @@ local function RestoreDefault(unit, healthBar)
 			tex:SetVertexColor(c[1], c[2], c[3], 1)
 		end
 	else
-		-- fallback if reaction is unavailable
 		healthBar:SetStatusBarColor(1, 1, 1, 1)
 
 		local tex = healthBar:GetStatusBarTexture()
@@ -214,7 +248,7 @@ end
 ------------------------------------------------------------
 
 local function ApplyColor(unit)
-	if not unit or not unit:find("nameplate") then
+	if type(unit) ~= "string" or not unit:find("nameplate") then
 		return
 	end
 
@@ -230,9 +264,7 @@ local function ApplyColor(unit)
 
 	local healthBar = plate.UnitFrame.healthBar
 
-	local enabled = TekagiUIDB and TekagiUIDB.Nameplates and TekagiUIDB.Nameplates.enabled ~= false
-
-	if enabled then
+	if IsEnabled() then
 		local c = GetColor(GetRole(unit))
 
 		healthBar:SetStatusBarColor(c.r, c.g, c.b, 1)
@@ -252,6 +284,10 @@ end
 ------------------------------------------------------------
 
 function M:Refresh()
+	if not IsEnabled() then
+		return
+	end
+
 	for unit in pairs(activeNameplates) do
 		if UnitExists(unit) then
 			ApplyColor(unit)
@@ -265,30 +301,45 @@ end
 -- Events
 ------------------------------------------------------------
 
-local frame = CreateFrame("Frame")
+if IsEnabled() then
+	RegisterEvents()
+end
 
-frame:RegisterEvent("PLAYER_LEVEL_UP")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
-frame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
-frame:RegisterEvent("UNIT_THREAT_LIST_UPDATE")
-frame:RegisterEvent("UNIT_HEALTH")
+frame:SetScript("OnEvent", function(_, event, ...)
+	if not IsEnabled() then
+		return
+	end
 
-frame:SetScript("OnEvent", function(_, event, unit)
 	if event == "PLAYER_LEVEL_UP" then
 		state.referenceLevel = UnitLevel("player")
+		M:Refresh()
+	elseif event == "PLAYER_ENTERING_WORLD" then
+		state.referenceLevel = UnitLevel("player")
+		M:Refresh()
 	elseif event == "NAME_PLATE_UNIT_ADDED" then
-		activeNameplates[unit] = true
+		local unit = ...
 
-		C_Timer.After(0, function()
-			ApplyColor(unit)
-		end)
+		if type(unit) == "string" then
+			activeNameplates[unit] = true
+
+			C_Timer.After(0, function()
+				ApplyColor(unit)
+			end)
+		end
 	elseif event == "NAME_PLATE_UNIT_REMOVED" then
-		activeNameplates[unit] = nil
-	elseif unit and unit:find("nameplate") then
-		C_Timer.After(0, function()
-			ApplyColor(unit)
-		end)
+		local unit = ...
+
+		if type(unit) == "string" then
+			activeNameplates[unit] = nil
+		end
+	elseif event == "UNIT_HEALTH" or event == "UNIT_THREAT_LIST_UPDATE" then
+		local unit = ...
+
+		if type(unit) == "string" and unit:find("nameplate") then
+			C_Timer.After(0, function()
+				ApplyColor(unit)
+			end)
+		end
 	end
 end)
 
